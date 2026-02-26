@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Result {
   name: string;
@@ -42,8 +43,62 @@ const Admin = () => {
   const [tabMax, setTabMax] = useState<number | "">("");
   const [autoFilter, setAutoFilter] = useState<"all" | "yes" | "no">("all");
   const [confirmExportType, setConfirmExportType] = useState<"csv" | "xlsx" | null>(null);
+  const [results, setResults] = useState<Result[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const results: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
+  useEffect(() => {
+    const load = async () => {
+      try {
+        // If Supabase is not configured, fall back to localStorage.
+        if (!supabase) {
+          const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
+          setResults(Array.isArray(local) ? local : []);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("quiz_results")
+          .select(
+            "name, roll_number, time_taken_seconds, score, total, taken_at, tab_switch_count, auto_submitted, submission_reason",
+          );
+
+        if (error) {
+          console.error("Failed to load results from Supabase", error);
+          setLoadError("Unable to load live results. Showing local data if available.");
+          const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
+          setResults(Array.isArray(local) ? local : []);
+          setLoading(false);
+          return;
+        }
+
+        const mapped: Result[] =
+          (data ?? []).map((r: any) => ({
+            name: r.name ?? "",
+            rollNumber: r.roll_number ?? "",
+            timeTaken: r.time_taken_seconds ?? 0,
+            score: r.score ?? 0,
+            total: r.total ?? 0,
+            date: r.taken_at ?? new Date().toISOString(),
+            tabSwitchCount: r.tab_switch_count ?? 0,
+            autoSubmitted: r.auto_submitted ?? false,
+            submissionReason: (r.submission_reason as Result["submissionReason"]) ?? null,
+          })) ?? [];
+
+        setResults(mapped);
+        setLoading(false);
+      } catch (err) {
+        console.error("Unexpected error loading results", err);
+        setLoadError("Unable to load live results. Showing local data if available.");
+        const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
+        setResults(Array.isArray(local) ? local : []);
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
   const rankedResults = useMemo(() => {
     const safe = Array.isArray(results) ? results : [];
     // One attempt per roll number (keep best according to ranking rules)
@@ -242,6 +297,12 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
+        {loading && (
+          <p className="text-sm text-muted-foreground">Loading results from server...</p>
+        )}
+        {loadError && !loading && (
+          <p className="text-sm text-destructive">{loadError}</p>
+        )}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold text-foreground">Quiz Results Dashboard</h1>
           <div className="flex flex-wrap gap-2">

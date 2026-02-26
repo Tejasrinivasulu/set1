@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { questions as quizQuestions } from "@/data/questions";
 
 interface Participant {
@@ -81,7 +82,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     setScore(correct);
 
-    // Save to localStorage for admin
+    // Save to localStorage for admin (local backup)
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     const result = {
       name: participant?.name || "",
@@ -98,6 +99,33 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     existing.push(result);
     localStorage.setItem("quizResults", JSON.stringify(existing));
     sessionStorage.removeItem("quizTabSwitchCount");
+
+    // Also send to Supabase central database if configured
+    if (supabase && result.rollNumber) {
+      supabase
+        .from("quiz_results")
+        .insert({
+          name: result.name,
+          roll_number: result.rollNumber,
+          time_taken_seconds: result.timeTaken,
+          score: result.score,
+          total: result.total,
+          taken_at: result.date,
+          tab_switch_count: result.tabSwitchCount,
+          auto_submitted: result.autoSubmitted,
+          submission_reason: result.submissionReason,
+        })
+        .then(({ error }) => {
+          if (error) {
+            // eslint-disable-next-line no-console
+            console.error("Failed to store result in Supabase", error);
+          }
+        })
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("Unexpected Supabase error", err);
+        });
+    }
   }, [quizSubmitted, answers, startTime, participant]);
 
   const registerTabSwitch = useCallback(() => {
