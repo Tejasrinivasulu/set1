@@ -15,6 +15,8 @@ interface QuizState {
   quizSubmitted: boolean;
   score: number | null;
   startTime: number | null;
+  tabSwitchCount: number;
+  submissionReason: "manual" | "timeout" | "tabSwitch" | null;
 }
 
 interface QuizContextType extends QuizState {
@@ -22,7 +24,8 @@ interface QuizContextType extends QuizState {
   setAnswer: (questionIndex: number, answer: string) => void;
   setCurrentQuestion: (index: number) => void;
   startQuiz: () => void;
-  submitQuiz: () => void;
+  submitQuiz: (opts?: { reason?: "manual" | "timeout" | "tabSwitch" }) => void;
+  registerTabSwitch: () => number;
   timeRemaining: number;
 }
 
@@ -43,7 +46,10 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [submissionReason, setSubmissionReason] = useState<"manual" | "timeout" | "tabSwitch" | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tabSwitchCountRef = useRef(0);
 
   const setAnswer = useCallback((questionIndex: number, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionIndex]: answer }));
@@ -53,11 +59,19 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setQuizStarted(true);
     setStartTime(Date.now());
     setTimeRemaining(30 * 60);
+    setTabSwitchCount(0);
+    tabSwitchCountRef.current = 0;
+    setSubmissionReason(null);
+    sessionStorage.removeItem("quizTabSwitchCount");
+    sessionStorage.removeItem("quizSubmissionReason");
   }, []);
 
-  const submitQuiz = useCallback(() => {
+  const submitQuiz = useCallback((opts?: { reason?: "manual" | "timeout" | "tabSwitch" }) => {
     if (quizSubmitted) return;
+    const reason = opts?.reason ?? "manual";
     setQuizSubmitted(true);
+    setSubmissionReason(reason);
+    sessionStorage.setItem("quizSubmissionReason", reason);
     if (timerRef.current) clearInterval(timerRef.current);
 
     let correct = 0;
@@ -76,11 +90,22 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       score: correct,
       total: quizQuestions.length,
       date: new Date().toISOString(),
+      tabSwitchCount: tabSwitchCountRef.current,
+      autoSubmitted: reason !== "manual",
+      submissionReason: reason,
     };
     const existing = JSON.parse(localStorage.getItem("quizResults") || "[]");
     existing.push(result);
     localStorage.setItem("quizResults", JSON.stringify(existing));
+    sessionStorage.removeItem("quizTabSwitchCount");
   }, [quizSubmitted, answers, startTime, participant]);
+
+  const registerTabSwitch = useCallback(() => {
+    tabSwitchCountRef.current += 1;
+    setTabSwitchCount(tabSwitchCountRef.current);
+    sessionStorage.setItem("quizTabSwitchCount", String(tabSwitchCountRef.current));
+    return tabSwitchCountRef.current;
+  }, []);
 
   // Timer effect
   useEffect(() => {
@@ -89,7 +114,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeRemaining((prev) => {
           if (prev <= 1) {
             // Auto-submit
-            submitQuiz();
+            submitQuiz({ reason: "timeout" });
             return 0;
           }
           return prev - 1;
@@ -124,11 +149,14 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         quizSubmitted,
         score,
         startTime,
+        tabSwitchCount,
+        submissionReason,
         setParticipant,
         setAnswer,
         setCurrentQuestion,
         startQuiz,
         submitQuiz,
+        registerTabSwitch,
       }}
     >
       {children}

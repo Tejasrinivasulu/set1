@@ -36,26 +36,47 @@ const Login = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-extrabold tracking-tight">QUIZ</CardTitle>
+      <Card className="w-full max-w-xl shadow-xl border-2 border-border/60">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-4xl md:text-5xl font-extrabold tracking-tight">QUIZ LOGIN</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+              <Label htmlFor="name" className="text-lg md:text-xl font-semibold">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                className="h-12 md:h-14 text-lg md:text-xl"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="roll">Roll Number</Label>
-              <Input id="roll" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="Enter your roll number" />
+              <Label htmlFor="roll" className="text-lg md:text-xl font-semibold">Roll Number</Label>
+              <Input
+                id="roll"
+                value={rollNumber}
+                onChange={(e) => setRollNumber(e.target.value)}
+                placeholder="Enter your roll number"
+                className="h-12 md:h-14 text-lg md:text-xl"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
+              <Label htmlFor="password" className="text-lg md:text-xl font-semibold">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="h-12 md:h-14 text-lg md:text-xl"
+              />
             </div>
-            {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-            <Button type="submit" className="w-full" size="lg">Login</Button>
+            {error && <p className="text-base md:text-lg text-destructive font-semibold">{error}</p>}
+            <Button type="submit" className="w-full text-xl md:text-2xl py-4 md:py-5" size="lg">
+              Login
+            </Button>
           </form>
         </CardContent>
       </Card>

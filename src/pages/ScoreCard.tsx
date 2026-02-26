@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ScoreCard = () => {
   const navigate = useNavigate();
-  const { participant, score } = useQuiz();
+  const { participant, score, submissionReason, tabSwitchCount } = useQuiz();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -15,6 +15,11 @@ const ScoreCard = () => {
           <CardTitle className="text-3xl font-extrabold tracking-tight">QUIZ</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {submissionReason === "tabSwitch" && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              Auto-submitted due to tab switching (violations: {tabSwitchCount}).
+            </div>
+          )}
           <p className="text-muted-foreground">Participant: <span className="text-foreground font-medium">{participant?.name}</span></p>
           <p className="text-muted-foreground">Roll Number: <span className="text-foreground font-medium">{participant?.rollNumber}</span></p>
           <div className="py-6">
