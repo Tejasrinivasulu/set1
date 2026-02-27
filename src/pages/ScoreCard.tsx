@@ -4,7 +4,7 @@ import { questions } from "@/data/questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const FORM_URL = "https://forms.gle/CAYSPkdtnpmZ5ssaA";
+const FORM_URL = "https://forms.gle/9Pjs5AYs2hoyh6Qi9";
 
 const ScoreCard = () => {
   const navigate = useNavigate();

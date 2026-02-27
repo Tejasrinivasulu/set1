@@ -81,24 +81,24 @@ const Quiz = () => {
     }
   > = {
     26: {
-      src: "/images/q26-tyndall-effect.png",
-      alt: "Green laser beam passing through a colloidal solution demonstrating the Tyndall effect",
+      src: "/images/q26-water-molecule.png",
+      alt: "3D model of a water molecule with one red oxygen atom and two white hydrogen atoms",
     },
     27: {
-      src: "/images/q27-lichen-bioindicator.png",
-      alt: "Yellow lichen growing on a concrete bridge used as a bio-indicator of air pollution",
+      src: "/images/q27-saturn.png",
+      alt: "Image of the planet Saturn with its prominent ring system",
     },
     28: {
-      src: "/images/q28-vernier-caliper.png",
-      alt: "Vernier caliper measuring a hexagonal nut",
+      src: "/images/q28-double-slit.png",
+      alt: "Green laser producing an interference fringe pattern on a screen in a double-slit experiment setup",
     },
     29: {
-      src: "/images/q29-marie-curie.png",
-      alt: "Historic photograph of a scientist working in a laboratory",
+      src: "/images/q29-magnetosphere.png",
+      alt: "Visualization of Earth surrounded by a protective magnetic field region deflecting solar wind",
     },
     30: {
-      src: "/images/q30-plant-cells-chloroplasts.png",
-      alt: "Microscopic view of plant cells showing green chloroplasts",
+      src: "/images/q30-diffraction-rings.png",
+      alt: "Concentric bright and dark rings created by electron diffraction from a polycrystalline sample",
     },
   };
 

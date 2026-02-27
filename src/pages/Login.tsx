@@ -22,7 +22,7 @@ const Login = () => {
       setError("Please fill in all fields.");
       return;
     }
-    if (password !== "Quiz@1") {
+    if (password !== "Quiz@2") {
       setError("Incorrect password. Please try again.");
       return;
     }
