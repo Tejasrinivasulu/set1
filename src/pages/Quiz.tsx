@@ -81,24 +81,24 @@ const Quiz = () => {
     }
   > = {
     26: {
-      src: "/images/q26-water-molecule.png",
-      alt: "3D model of a water molecule with one red oxygen atom and two white hydrogen atoms",
+      src: "/images/q26-bunsen-burner.png",
+      alt: "Laboratory setup showing a lit Bunsen burner with a blue flame",
     },
     27: {
-      src: "/images/q27-saturn.png",
-      alt: "Image of the planet Saturn with its prominent ring system",
+      src: "/images/q27-relativity-scientist.png",
+      alt: "Portrait of a physicist who developed the theory of relativity",
     },
     28: {
-      src: "/images/q28-double-slit.png",
-      alt: "Green laser producing an interference fringe pattern on a screen in a double-slit experiment setup",
+      src: "/images/q28-photosynthesis.png",
+      alt: "Diagram of the photosynthesis process occurring inside a chloroplast",
     },
     29: {
-      src: "/images/q29-magnetosphere.png",
-      alt: "Visualization of Earth surrounded by a protective magnetic field region deflecting solar wind",
+      src: "/images/q29-marie-curie-lab.png",
+      alt: "Historic photograph of a scientist working with glassware and chemicals in a laboratory",
     },
     30: {
-      src: "/images/q30-diffraction-rings.png",
-      alt: "Concentric bright and dark rings created by electron diffraction from a polycrystalline sample",
+      src: "/images/q30-eye-iris.png",
+      alt: "Illustration of a human eye highlighting the colored iris around the pupil",
     },
   };
 
