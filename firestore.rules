@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      // TODO: replace with your admin email(s)
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email in [
+          "boyateja3541@gmail.com"
+        ];
+    }
+
+    match /quizResults/{rollNumber} {
+      // Admin can read/write everything
+      allow read, update, delete: if isAdmin();
+
+      // Participants can only create ONE document, with docId == rollNumber
+      // No reads for participants.
+      allow create: if request.auth != null
+        && request.resource.data.rollNumber == rollNumber
+        && !exists(/databases/$(database)/documents/quizResults/$(rollNumber));
+    }
+  }
+}
+

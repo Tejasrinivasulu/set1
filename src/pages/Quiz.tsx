@@ -73,6 +73,35 @@ const Quiz = () => {
 
   if (!q) return null;
 
+  const questionImages: Record<
+    number,
+    {
+      src: string;
+      alt: string;
+    }
+  > = {
+    26: {
+      src: "/images/q26-tyndall-effect.png",
+      alt: "Green laser beam passing through a colloidal solution demonstrating the Tyndall effect",
+    },
+    27: {
+      src: "/images/q27-lichen-bioindicator.png",
+      alt: "Yellow lichen growing on a concrete bridge used as a bio-indicator of air pollution",
+    },
+    28: {
+      src: "/images/q28-vernier-caliper.png",
+      alt: "Vernier caliper measuring a hexagonal nut",
+    },
+    29: {
+      src: "/images/q29-marie-curie.png",
+      alt: "Historic photograph of a scientist working in a laboratory",
+    },
+    30: {
+      src: "/images/q30-plant-cells-chloroplasts.png",
+      alt: "Microscopic view of plant cells showing green chloroplasts",
+    },
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       <AlertDialog
@@ -171,8 +200,19 @@ const Quiz = () => {
         </header>
 
         {/* Question */}
-        <div className="flex-1 p-6 max-w-3xl">
-          <p className="text-2xl md:text-3xl font-semibold text-foreground mb-8 leading-snug">
+        <div className="flex-1 p-6 max-w-3xl space-y-6">
+          {questionImages[q.id] && (
+            <div className="w-full flex justify-center">
+              <div className="w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-muted/40">
+                <img
+                  src={questionImages[q.id].src}
+                  alt={questionImages[q.id].alt}
+                  className="w-full max-h-80 object-contain bg-black/5"
+                />
+              </div>
+            </div>
+          )}
+          <p className="text-2xl md:text-3xl font-semibold text-foreground leading-snug">
             <span className="text-muted-foreground mr-3 text-xl md:text-2xl">Q{currentQuestion + 1}.</span>
             {q.question}
           </p>

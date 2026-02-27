@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { db } from "@/lib/firebase";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { questions as quizQuestions } from "@/data/questions";
 
 interface Participant {
@@ -84,13 +85,17 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Save to localStorage for admin (local backup)
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    const endTimeIso = new Date().toISOString();
+    const startTimeIso = startTime ? new Date(startTime).toISOString() : "";
     const result = {
       name: participant?.name || "",
       rollNumber: participant?.rollNumber || "",
       timeTaken,
       score: correct,
       total: quizQuestions.length,
-      date: new Date().toISOString(),
+      startTime: startTimeIso,
+      endTime: endTimeIso,
+      date: endTimeIso,
       tabSwitchCount: tabSwitchCountRef.current,
       autoSubmitted: reason !== "manual",
       submissionReason: reason,
@@ -100,31 +105,30 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("quizResults", JSON.stringify(existing));
     sessionStorage.removeItem("quizTabSwitchCount");
 
-    // Also send to Supabase central database if configured
-    if (supabase && result.rollNumber) {
-      supabase
-        .from("quiz_results")
-        .insert({
+    // Store centrally in Firestore (one attempt per roll number)
+    if (result.rollNumber) {
+      const ref = doc(db, "quizResults", result.rollNumber);
+      runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        if (snap.exists()) {
+          throw new Error("DUPLICATE_ROLL");
+        }
+        tx.set(ref, {
           name: result.name,
-          roll_number: result.rollNumber,
-          time_taken_seconds: result.timeTaken,
+          rollNumber: result.rollNumber,
+          startTime: result.startTime,
+          endTime: result.endTime,
+          timeTaken: result.timeTaken,
           score: result.score,
           total: result.total,
-          taken_at: result.date,
-          tab_switch_count: result.tabSwitchCount,
-          auto_submitted: result.autoSubmitted,
-          submission_reason: result.submissionReason,
-        })
-        .then(({ error }) => {
-          if (error) {
-            // eslint-disable-next-line no-console
-            console.error("Failed to store result in Supabase", error);
-          }
-        })
-        .catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error("Unexpected Supabase error", err);
+          tabSwitch: result.tabSwitchCount,
+          autoSubmitted: result.autoSubmitted,
+          submissionReason: result.submissionReason,
+          createdAt: serverTimestamp(),
         });
+      }).catch(() => {
+        // If blocked (duplicate roll / rules), ignore — local backup already saved.
+      });
     }
   }, [quizSubmitted, answers, startTime, participant]);
 

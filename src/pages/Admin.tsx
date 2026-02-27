@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { collection, onSnapshot } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/lib/supabaseClient";
 
 interface Result {
   name: string;
@@ -23,17 +25,16 @@ interface Result {
   score: number;
   total: number;
   date: string;
+  startTime?: string;
+  endTime?: string;
   tabSwitchCount?: number;
   autoSubmitted?: boolean;
   submissionReason?: "manual" | "timeout" | "tabSwitch";
 }
 
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "Admin@1";
-
 const Admin = () => {
   const [authed, setAuthed] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -48,57 +49,47 @@ const Admin = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        // If Supabase is not configured, fall back to localStorage.
-        if (!supabase) {
-          const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
-          setResults(Array.isArray(local) ? local : []);
-          setLoading(false);
-          return;
-        }
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setAuthed(Boolean(user));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
-        const { data, error } = await supabase
-          .from("quiz_results")
-          .select(
-            "name, roll_number, time_taken_seconds, score, total, taken_at, tab_switch_count, auto_submitted, submission_reason",
-          );
-
-        if (error) {
-          console.error("Failed to load results from Supabase", error);
-          setLoadError("Unable to load live results. Showing local data if available.");
-          const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
-          setResults(Array.isArray(local) ? local : []);
-          setLoading(false);
-          return;
-        }
-
-        const mapped: Result[] =
-          (data ?? []).map((r: any) => ({
+  useEffect(() => {
+    if (!authed) return;
+    setLoading(true);
+    const unsub = onSnapshot(
+      collection(db, "quizResults"),
+      (snap) => {
+        const mapped: Result[] = snap.docs.map((d) => {
+          const r: any = d.data();
+          return {
             name: r.name ?? "",
-            rollNumber: r.roll_number ?? "",
-            timeTaken: r.time_taken_seconds ?? 0,
+            rollNumber: r.rollNumber ?? d.id,
+            startTime: r.startTime ?? "",
+            endTime: r.endTime ?? "",
+            timeTaken: r.timeTaken ?? 0,
             score: r.score ?? 0,
             total: r.total ?? 0,
-            date: r.taken_at ?? new Date().toISOString(),
-            tabSwitchCount: r.tab_switch_count ?? 0,
-            autoSubmitted: r.auto_submitted ?? false,
-            submissionReason: (r.submission_reason as Result["submissionReason"]) ?? null,
-          })) ?? [];
-
+            date: r.endTime ?? "",
+            tabSwitchCount: r.tabSwitch ?? r.tabSwitchCount ?? 0,
+            autoSubmitted: r.autoSubmitted ?? false,
+            submissionReason: r.submissionReason ?? null,
+          };
+        });
         setResults(mapped);
+        setLoadError(null);
         setLoading(false);
-      } catch (err) {
-        console.error("Unexpected error loading results", err);
-        setLoadError("Unable to load live results. Showing local data if available.");
-        const local: Result[] = JSON.parse(localStorage.getItem("quizResults") || "[]");
-        setResults(Array.isArray(local) ? local : []);
+      },
+      (err) => {
+        console.error("Firestore snapshot error", err);
+        setLoadError("Unable to load live results (Firestore).");
         setLoading(false);
-      }
-    };
-
-    load();
-  }, []);
+      },
+    );
+    return () => unsub();
+  }, [authed]);
   const rankedResults = useMemo(() => {
     const safe = Array.isArray(results) ? results : [];
     // One attempt per roll number (keep best according to ranking rules)
@@ -189,21 +180,15 @@ const Admin = () => {
     return data;
   }, [rankedResults, search, scoreMin, scoreMax, tabMin, tabMax, autoFilter]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedUser = username.trim().toLowerCase();
-    if (normalizedUser === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      setAuthed(true);
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       setError("");
-      sessionStorage.setItem("quizAdminAuthed", "true");
-    } else {
+    } catch {
       setError("Incorrect admin credentials.");
     }
   };
-
-  if (!authed && sessionStorage.getItem("quizAdminAuthed") === "true") {
-    setAuthed(true);
-  }
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -244,6 +229,8 @@ const Admin = () => {
       Rank: idx + 1,
       Name: r.name,
       "Roll Number": r.rollNumber,
+      "Start Time": r.startTime || "",
+      "End Time": r.endTime || "",
       "Time Taken (mm:ss)": formatTime(r.timeTaken),
       "Time Taken (seconds)": r.timeTaken,
       Score: r.score,
@@ -275,15 +262,15 @@ const Admin = () => {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username (admin)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Admin email"
               />
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password (Admin@1)"
+                placeholder="Admin password"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full">Login</Button>
@@ -297,6 +284,16 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              signOut(auth).catch(() => {});
+            }}
+          >
+            Logout
+          </Button>
+        </div>
         {loading && (
           <p className="text-sm text-muted-foreground">Loading results from server...</p>
         )}
